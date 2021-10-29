@@ -5,7 +5,7 @@
 ;; Filename: capf-autosuggest.el
 ;; Author: jakanakaevangeli <jakanakaevangeli@chiru.no>
 ;; Created: 2021-07-13
-;; Version: 0.1
+;; Version: 0.2
 ;; Package-Requires: ((emacs "25.1"))
 ;; URL: https://repo.or.cz/emacs-capf-autosuggest.git
 
@@ -30,21 +30,29 @@
 ;; similar to zsh-autosuggestions or fish.  It works in eshell and in modes
 ;; derived from comint-mode, for example M-x shell and M-x run-python.
 ;;
+;; As you type, the history auto-suggestion is shown as an overlay after point.
+;; Type [C-e] to insert text from this overlay or [M-f] to only insert a word
+;; from this overlay.  [C-n] is a shorthand for [C-e] followed by [RET]: it
+;; inserts text from the overlay and sends it to the process.
+;;
 ;;;; Installation:
 ;;
-;; Add the following to your Emacs init file:
+;; To install capf-autosuggest, type
+;; M-x package-install RET capf-autosuggest RET.
 ;;
-;;  (add-to-list 'load-path "/path/to/emacs-capf-autosuggest")
-;;  (autoload 'capf-autosuggest-mode "capf-autosuggest")
+;; Enable it with M-x capf-autosuggest-mode.  It is best to add the following
+;; elisp snippet to your Emacs init file to enable `capf-autosuggest-mode'
+;; automatically for every comint and eshell buffer:
+;;
 ;;  (add-hook 'comint-mode-hook #'capf-autosuggest-mode)
 ;;  (add-hook 'eshell-mode-hook #'capf-autosuggest-mode)
 ;;
 ;;;; Configuration:
 ;;
 ;; Use `capf-autosuggest-define-partial-accept-cmd' to make a command that can
-;; move point into an auto-suggested layer.
+;; move point into an auto-suggested overlay.
 ;;
-;; Example: to make C-M-f (forward-sexp) movable into suggested text, put the
+;; Example: to make [C-M-f] (forward-sexp) movable into suggested text, put the
 ;; following into your Emacs init file:
 ;;
 ;;  (with-eval-after-load 'capf-autosuggest
@@ -53,10 +61,10 @@
 ;;    (define-key capf-autosuggest-active-mode-map
 ;;      [remap forward-sexp] #'movable-forward-sexp))
 ;;
-;; By default, C-n (next-line) will accept the currently displayed suggestion
-;; and send input to shell/eshell.  See the customization group
-;; capf-autosuggest do disable this behaviour or enable it for other commands,
-;; such as C-c C-n or M-n.
+;; By default, [C-n] (next-line) will accept the currently displayed suggestion
+;; and send input to shell/eshell.  To disable this behaviour or enable it for
+;; other commands such as [C-c C-n] or [M-n], see the customization group
+;; `capf-autosuggest'
 ;;
 ;;;; Details:
 ;;
@@ -90,6 +98,14 @@
 ;; allows having a delay and it is implemented only for eshell.
 ;;
 ;; [1]: http://github.com/dieggsy/esh-autosuggest
+;;
+;;;; Bugs, suggestions and patches can be sent to
+;;
+;;    bugs-doseganje (at) groups.io
+;;
+;; and can be viewed at https://groups.io/g/bugs-doseganje/topics.  As this
+;; package is stored in GNU ELPA, non-trivial patches require copyright
+;; assignment to the FSF, see info node "(emacs) Copyright Assignment".
 
 ;;; Code:
 
@@ -366,20 +382,21 @@ in order to skip the history element already shown by the overlay."
 (defcustom capf-autosuggest-dwim-next-line t
   "Whether `next-line' can accept and send current suggestion.
 If t and point is on last line, `next-line' will accept the
-current suggestion and send input."
+current suggestion and send it to the process as input."
   :type 'boolean)
 (defcustom capf-autosuggest-dwim-next-prompt nil
   "Whether next-prompt commands can send current suggestion.
 If t and point is after the last prompt, `comint-next-prompt' and
 `eshell-next-prompt' will accept the current suggestion and send
-input."
+it to the process as input."
   :type 'boolean)
 (defcustom capf-autosuggest-dwim-next-input nil
   "Whether next-input commands can send current suggestion.
 If t and previous command wasn't a history command
-\(next/previous-input or previous/next-matching-input-from-input),
-`comint-next-input' and `eshell-next-input' will accept the
-current suggestion and send input."
+\(next/previous-input or
+previous/next-matching-input-from-input), `comint-next-input' and
+`eshell-next-input' will accept the current suggestion and send
+it to the process as input."
   :type 'boolean)
 (defcustom capf-autosuggest-dwim-next-matching-input-from-input nil
   "Whether next-input commands can send current suggestion.
@@ -387,7 +404,7 @@ If t and previous command wasn't a history matching command
 \(previous or next-matching-input-from-input),
 `comint-next-matching-input-from-input' and
 `eshell-next-matching-input-from-input' will accept the current
-suggestion and send input."
+suggestion and send it to the process as input."
   :type 'boolean)
 
 (defun capf-autosuggest--accept-and-remapping (cmd)

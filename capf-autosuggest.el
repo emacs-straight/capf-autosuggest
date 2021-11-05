@@ -199,7 +199,16 @@ Otherwise, return nil."
                      (throw catch-sym
                             (list start end collection :predicate predicate))))
                   (buffer-read-only t)
-                  (inhibit-quit nil))
+                  (inhibit-quit nil)
+                  ;; With `corfu-mode' enabled, `completion--capf-wrapper' is
+                  ;; advised to use completion styles instead of simple prefix
+                  ;; completion for non-:exclusive criteria, making it more
+                  ;; accurate, but also quite slower.  In our case, we are only
+                  ;; interested in prefix matching and speed, so we enable only
+                  ;; the simple and fast `emacs21' prefix matching completion
+                  ;; style.
+                  (completion-styles '(emacs21))
+                  (completion-category-overrides nil))
              (condition-case nil
                  (catch catch-sym
                    (while-no-input
@@ -574,38 +583,11 @@ Is only applicable if point is after the last prompt."
 
 (defun capf-autosuggest--completion-table (ring)
   "Return a completion table to complete on RING."
-  (let (self)
-    (setq
-     self
-     (lambda (input predicate action)
-       (cond
-        ((eq action t)
-         (cl-loop
-          with only-one = capf-autosuggest-all-completions-only-one
-          with regexps = completion-regexp-list
-          for i below (ring-size ring)
-          for elem = (ring-ref ring i)
-          if (string-prefix-p input elem)
-          if (cl-loop for regex in regexps
-                      always (string-match-p regex elem))
-          if (or (null predicate)
-                 (funcall predicate elem))
-          if only-one
-          return (list elem)
-          else collect elem))
-        ((eq action nil)
-         (complete-with-action
-          nil (let ((capf-autosuggest-all-completions-only-one nil))
-                (funcall self input predicate t))
-          input predicate))
-        ((eq action 'lambda)
-         (and (ring-member ring input)
-              (or (null predicate)
-                  (funcall predicate input))
-              (cl-loop for regex in completion-regexp-list
-                       always (string-match-p regex input))))
-        (t (complete-with-action
-            action (ring-elements ring) input predicate)))))))
+  (let ((ring-elems t))
+    (lambda (input predicate action)
+      (when (eq ring-elems t)
+        (setq ring-elems (ring-elements ring)))
+      (complete-with-action action ring-elems input predicate))))
 
 (defun capf-autosuggest-minibuffer-capf ()
   "Completion-at-point function for minibuffer history."

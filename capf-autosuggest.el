@@ -150,12 +150,6 @@ It is used instead of the standard
 `capf-autosuggest-orig-if-at-eol-capf' which searches the
 standard capf functions, if point is at the end of line.")
 
-(defvar capf-autosuggest-all-completions-only-one nil
-  "Non-nil if only the first result of `all-completions' is of interest.
-capf-autosuggest binds this to t around calls to
-`all-completions'.  A dynamic completion table can take this as a
-hint to only return a list of one element for optimization.")
-
 (defvar-local capf-autosuggest--overlay nil)
 (defvar-local capf-autosuggest--str "")
 (defvar-local capf-autosuggest--tick nil)
@@ -223,14 +217,11 @@ Otherwise, return nil."
               ;; See `completion-emacs21-all-completions'
               (base (car (completion-boundaries string table pred ""))))
          (when-let*
-             ((completions
-               (let ((capf-autosuggest-all-completions-only-one t))
-                 ;; Use `all-completions' rather than
-                 ;; `completion-all-completions' to bypass completion styles
-                 ;; and strictly match only on prefix.  This makes sense here
-                 ;; as we only use the string without the prefix for the
-                 ;; overlay.
-                 (all-completions string table pred)))
+             ;; Use `all-completions' rather than `completion-all-completions'
+             ;; to bypass completion styles and strictly match only on prefix.
+             ;; This makes sense here as we only use the string without the
+             ;; prefix for the overlay.
+             ((completions (all-completions string table pred))
               ;; `all-completions' may return strings that don't strictly
               ;; match on our prefix.  Ignore them.
               ((string-prefix-p (substring string base) (car completions)))
@@ -421,10 +412,11 @@ suggestion and send it to the process as input."
   ;; Avoid infinite recursion when searching for the command remapping
   (let ((capf-autosuggest-active-mode nil))
     (setq cmd (or (command-remapping cmd) cmd)))
-  (lambda ()
-    (interactive)
+  (lambda (int)
+    (interactive "p")
     (capf-autosuggest-accept)
-    (undo-boundary)
+    (when int
+      (undo-boundary))
     (setq this-command cmd)
     (call-interactively cmd)))
 

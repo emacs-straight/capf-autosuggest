@@ -5,7 +5,7 @@
 ;; Filename: capf-autosuggest.el
 ;; Author: jakanakaevangeli <jakanakaevangeli@chiru.no>
 ;; Created: 2021-07-13
-;; Version: 0.2
+;; Version: 0.3
 ;; Package-Requires: ((emacs "25.1"))
 ;; URL: https://repo.or.cz/emacs-capf-autosuggest.git
 
